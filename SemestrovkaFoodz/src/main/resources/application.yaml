@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /demo
+jwt:
+  access-secret: 984hg493gh0439rthr0429uruj2309yh937gc763fe87t3f89723gf
+  access-lifetime: 1m
+  refresh-secret: 984hg493gh0439rthr0429uruj2309yh937gc763fe87t3f89723gf
+  refresh-lifetime: 10m
+spring:
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 123
+    driverClassName: org.postgresql.Driver
+  main:
+    allow-circular-references: true
+#logging:
+#  level:
+#    org:
+#      springframework:
+#        security: TRACE
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
