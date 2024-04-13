@@ -13,7 +13,7 @@ import com.example.semestrovkafoodz.dtos.JwtRequest;
 import com.example.semestrovkafoodz.dtos.JwtResponse;
 import com.example.semestrovkafoodz.dtos.RegistrationUserDto;
 import com.example.semestrovkafoodz.dtos.UserDto;
-import com.example.semestrovkafoodz.entities.User;
+import com.example.semestrovkafoodz.entities.UserEntity;
 import com.example.semestrovkafoodz.exceptions.AppError;
 import com.example.semestrovkafoodz.utils.JwtTokenUtils;
 
@@ -31,8 +31,8 @@ public class AuthService {
             return new ResponseEntity<>(new AppError(HttpStatus.UNAUTHORIZED.value(), "Неправильный логин или пароль"), HttpStatus.UNAUTHORIZED);
         }
         UserDetails userDetails = userDetailsServiceImpl.loadUserByUsername(authRequest.getUsername());
-        String token = jwtTokenUtils.generateToken(userDetails);
-        return ResponseEntity.ok(new JwtResponse(token));
+        JwtResponse jwtResponse = jwtTokenUtils.generateToken(userDetails);
+        return ResponseEntity.ok(jwtResponse);
     }
 
     public ResponseEntity<?> createNewUser(@RequestBody RegistrationUserDto registrationUserDto) {
@@ -42,7 +42,13 @@ public class AuthService {
         if (userDetailsServiceImpl.findByUsername(registrationUserDto.getUsername()).isPresent()) {
             return new ResponseEntity<>(new AppError(HttpStatus.BAD_REQUEST.value(), "Пользователь с указанным именем уже существует"), HttpStatus.BAD_REQUEST);
         }
-        User user = userDetailsServiceImpl.createNewUser(registrationUserDto);
-        return ResponseEntity.ok(new UserDto(user.getId(), user.getUsername(), user.getEmail()));
+        UserEntity userEntity = userDetailsServiceImpl.createNewUser(registrationUserDto);
+        return ResponseEntity.ok(new UserDto(userEntity.getUserId(), userEntity.getUsername(), userEntity.getEmail()));
+    }
+
+    public ResponseEntity<?> updateToken(@RequestBody JwtResponse jwtResponse) {
+        String username = jwtTokenUtils.getUsername(jwtResponse.getRefreshToken());
+        UserDetails userDetails = userDetailsServiceImpl.loadUserByUsername(username);
+        return ResponseEntity.ok(jwtTokenUtils.generateToken(userDetails));
     }
 }

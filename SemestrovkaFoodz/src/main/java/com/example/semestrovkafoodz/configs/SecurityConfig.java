@@ -20,6 +20,7 @@ import com.example.semestrovkafoodz.service.UserDetailsServiceImpl;
 
 @EnableWebSecurity
 @Configuration
+
 public class SecurityConfig {
     @Autowired
     @Qualifier("customUserDetailsService")
@@ -35,10 +36,12 @@ public class SecurityConfig {
                 .cors(AbstractHttpConfigurer::disable)
                 .authorizeRequests(matcherRegistry -> matcherRegistry
                         .requestMatchers("/secured").authenticated()
-                        .requestMatchers("/info").authenticated()
+                        .requestMatchers("/info").anonymous()
+                        .requestMatchers("/search").authenticated()
+                        .requestMatchers("/favoritesProducts").authenticated()
                         .requestMatchers("/admin").hasRole("ADMIN")
                         .anyRequest().permitAll())
-                .addFilterAt(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception
