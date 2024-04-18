@@ -1,5 +1,6 @@
 package com.example.semestrovkafoodz.service;
 
+import com.example.semestrovkafoodz.dtos.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,13 +10,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
-import com.example.semestrovkafoodz.dtos.JwtRequest;
-import com.example.semestrovkafoodz.dtos.JwtResponse;
-import com.example.semestrovkafoodz.dtos.RegistrationUserDto;
-import com.example.semestrovkafoodz.dtos.UserDto;
 import com.example.semestrovkafoodz.entities.UserEntity;
 import com.example.semestrovkafoodz.exceptions.AppError;
 import com.example.semestrovkafoodz.utils.JwtTokenUtils;
+
+import java.security.SignatureException;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +31,7 @@ public class AuthService {
         }
         UserDetails userDetails = userDetailsServiceImpl.loadUserByUsername(authRequest.getUsername());
         JwtResponse jwtResponse = jwtTokenUtils.generateToken(userDetails);
+
         return ResponseEntity.ok(jwtResponse);
     }
 
@@ -43,12 +43,11 @@ public class AuthService {
             return new ResponseEntity<>(new AppError(HttpStatus.BAD_REQUEST.value(), "Пользователь с указанным именем уже существует"), HttpStatus.BAD_REQUEST);
         }
         UserEntity userEntity = userDetailsServiceImpl.createNewUser(registrationUserDto);
-        return ResponseEntity.ok(new UserDto(userEntity.getUserId(), userEntity.getUsername(), userEntity.getEmail()));
+        return ResponseEntity.ok(new UserDto(userEntity.getUserId(), userEntity.getUsername()));
     }
 
-    public ResponseEntity<?> updateToken(@RequestBody JwtResponse jwtResponse) {
-        String username = jwtTokenUtils.getUsername(jwtResponse.getRefreshToken());
-        UserDetails userDetails = userDetailsServiceImpl.loadUserByUsername(username);
-        return ResponseEntity.ok(jwtTokenUtils.generateToken(userDetails));
+    public ResponseEntity<?> updateToken(@RequestBody TokenDto refreshToken) {
+        JwtResponse jwtResponse = jwtTokenUtils.updateToken(refreshToken);
+        return ResponseEntity.ok(jwtResponse);
     }
 }

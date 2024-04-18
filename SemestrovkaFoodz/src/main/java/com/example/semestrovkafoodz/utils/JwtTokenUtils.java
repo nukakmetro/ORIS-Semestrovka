@@ -1,10 +1,15 @@
 package com.example.semestrovkafoodz.utils;
 
 import com.example.semestrovkafoodz.dtos.JwtResponse;
+import com.example.semestrovkafoodz.dtos.TokenDto;
+import com.example.semestrovkafoodz.entities.TokenEntity;
+import com.example.semestrovkafoodz.entities.UserEntity;
+import com.example.semestrovkafoodz.repositories.TokenRepository;
 import com.example.semestrovkafoodz.repositories.UserRepository;
 import com.google.gson.Gson;
 import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.ILoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
@@ -32,44 +37,65 @@ public class JwtTokenUtils {
 
     @Autowired
     public UserRepository userRepository;
+    @Autowired
+    public TokenRepository tokenRepository;
 
 
     public JwtResponse generateToken(UserDetails userDetails) {
-        Map<String, Object> claimsAccess = new HashMap<>();
-        Map<String, Object> claimsRefresh = new HashMap<>();
+        UserEntity userEntity = userRepository.findByUsername(userDetails.getUsername()).get();
+        return createTokens(userEntity);
+    }
+
+    public JwtResponse createTokens(UserEntity userEntity) {
+        Map<String, Object> claims = new HashMap<>();
         List<String> roles = new ArrayList<>();
-        roles.add(userRepository.findByUsername(userDetails.getUsername()).get().getRole());
-        userRepository.findByUsername(userDetails.getUsername()).get().getRole();
-        claimsAccess.put("roles", roles);
-        claimsAccess.put("type", "access");
-        claimsRefresh.put("type", "refresh");
-        claimsRefresh.put("roles", roles);
+        roles.add(userEntity.getRole());
+        claims.put("roles", roles);
 
         Date issuedDate = new Date();
         Date accessExpiredDate = new Date(issuedDate.getTime() + accessJwtLifetime.toMillis());
         Date refreshExpiredDate = new Date(issuedDate.getTime() + refreshJwtLifetime.toMillis());
 
-        return new JwtResponse
-                (Jwts.builder()
-                        .setClaims(claimsAccess)
-                        .setSubject(userDetails.getUsername())
+        JwtResponse jwtResponse = new JwtResponse(Jwts.builder()
+                .setClaims(claims)
+                .setSubject(userEntity.getUsername())
+                .setIssuedAt(issuedDate)
+                .setExpiration(accessExpiredDate)
+                .signWith(SignatureAlgorithm.HS256, accessSecret)
+                .compact(),
+                Jwts.builder()
+                        .setClaims(claims)
+                        .setSubject(userEntity.getUsername())
                         .setIssuedAt(issuedDate)
-                        .setHeaderParam("typ", "JWT")
-                        .setExpiration(accessExpiredDate)
-                        .signWith(SignatureAlgorithm.HS256, accessSecret)
-                        .compact(),
-                        Jwts.builder()
-                                .setClaims(claimsRefresh)
-                                .setSubject(userDetails.getUsername())
-                                .setIssuedAt(issuedDate)
-                                .setExpiration(refreshExpiredDate)
-                                .signWith(SignatureAlgorithm.HS256, refreshSecret)
-                                .compact()
-                );
+                        .setExpiration(refreshExpiredDate)
+                        .signWith(SignatureAlgorithm.HS256, refreshSecret)
+                        .compact());
+        TokenEntity tokenEntity = TokenEntity.builder()
+                .token(jwtResponse.getRefreshToken())
+                .user(userEntity)
+                .build();
+        tokenRepository.save(tokenEntity);
+        return jwtResponse;
+
+    }
+
+
+    public JwtResponse updateToken(TokenDto tokenDto) {
+            Optional<UserEntity> userEntityOptional = userRepository.findByUsername(getUsernameRefresh(tokenDto.getRefreshToken()));
+            Optional<TokenEntity> tokenEntityOptional = tokenRepository.findByToken(tokenDto.getRefreshToken());
+        if (tokenEntityOptional.isPresent() && userEntityOptional.isPresent()) {
+            tokenRepository.deleteById(tokenEntityOptional.get().getId());
+            return createTokens(userEntityOptional.get());
+        }
+        return null;
     }
 
     public String getUsername(String token) {
         return getAllClaimsFromToken(token).getSubject();
+    }
+
+    public String getUsernameRefresh(String token) {
+        return getAllClaimsFromRefreshToken(token).getSubject();
     }
 
     public List<String> getRoles(String token) {
@@ -77,20 +103,19 @@ public class JwtTokenUtils {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        String type = extractTokenType(token);
-        if (type.equals("access")) {
-            return Jwts.parserBuilder().
-                    setSigningKey(accessSecret)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-        } else {
-            return Jwts.parserBuilder().
-                    setSigningKey(refreshSecret)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
-        }
+        return Jwts.parserBuilder().
+                setSigningKey(accessSecret)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    private Claims getAllClaimsFromRefreshToken(String token) {
+        return Jwts.parserBuilder().
+                setSigningKey(refreshSecret)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     private String extractTokenType(String token) {

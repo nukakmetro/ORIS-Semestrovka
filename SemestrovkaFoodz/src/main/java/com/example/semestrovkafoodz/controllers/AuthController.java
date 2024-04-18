@@ -1,6 +1,7 @@
 package com.example.semestrovkafoodz.controllers;
 
-import com.example.semestrovkafoodz.dtos.JwtResponse;
+import com.example.semestrovkafoodz.dtos.TokenDto;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,8 +23,11 @@ public class AuthController {
     public ResponseEntity<?> createNewUser(@RequestBody RegistrationUserDto registrationUserDto) {
         return authService.createNewUser(registrationUserDto);
     }
-    @GetMapping("/updateToken")
-    public ResponseEntity<?> updateToken(@RequestBody JwtResponse jwtResponse) {
-        return authService.updateToken(jwtResponse);
+
+    @PostMapping("/updateToken")
+    public ResponseEntity<?> updateToken(@RequestBody TokenDto refreshToken) {
+
+        return authService.updateToken(refreshToken);
+
     }
 }

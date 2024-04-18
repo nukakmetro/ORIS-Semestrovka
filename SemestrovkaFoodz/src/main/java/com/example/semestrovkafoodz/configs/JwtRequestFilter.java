@@ -5,6 +5,7 @@ import io.jsonwebtoken.SignatureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,7 +19,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.stream.Collectors;
-
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtRequestFilter extends OncePerRequestFilter {
@@ -34,7 +35,10 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             try {
                 username = jwtTokenUtils.getUsername(jwt);
             } catch (ExpiredJwtException e) {
-                logger.warn("Время жизни токена вышло");
+                logger.info("Время жизни токена вышло");
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                response.getWriter().write("Unauthorized access");
+                return;
             } catch (SignatureException e) {
                 logger.warn("Подпись неправильная");
             } catch (NullPointerException e) {

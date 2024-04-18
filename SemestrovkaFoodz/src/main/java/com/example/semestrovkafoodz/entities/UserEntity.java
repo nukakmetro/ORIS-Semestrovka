@@ -20,7 +20,6 @@ public class UserEntity {
     private Long userId;
     private String username;
     private String password;
-    private String email;
 
     @OneToMany(mappedBy = "productId")
     private List<ProductEntity> productEntities;
